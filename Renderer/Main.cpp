@@ -54,17 +54,41 @@ int main(int argc, char** argv)
 void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color)
 {
     // Sort y-values of each vertex in ascending order in order to create segments that will allow us to fill lines later
-    if (t0.y > t1.y) { std::swap(t0, t1); };
-    if (t0.y > t2.y) { std::swap(t0, t2); };
-    if (t1.y > t2.y) { std::swap(t1, t2); };
+    if (t0.y > t1.y) { std::swap(t0, t1); }
+    if (t0.y > t2.y) { std::swap(t0, t2); }
+    if (t1.y > t2.y) { std::swap(t1, t2); }
 
+    int total_height = t2.y - t0.y;
+    for (int i = 0; i < total_height; i++) // For loop to fill in bottom segment of the triangles
+    {
+        bool second_half = i > t1.y - t0.y || t1.y == t0.y;
+        int segment_height = second_half ? t2.y - t1.y + 1: t1.y - t0.y + 1;
+        float alpha = (float) i/total_height;
+        float beta  = (float) (i - (second_half ? t1.y - t0.y: 0)) /segment_height;
+        Vec2i A =               t0 + (t2 - t0) * alpha;
+        Vec2i B = second_half ? t1 + (t2 - t1) * beta: t0 + (t1 - t0) * beta;
+        if (A.x > B.x) { std::swap(A, B); }
+        for (int j = A.x; j < B.x; j++)
+        {
+            image.set(j, t0.y + i, color);
+        }
+    }
 
-
-
-
-
-
-
+    /* alpha is the same for top segment as well so for loops can be combined
+    segment_height = t2.y - t1.y + 1;
+    for (int y = t1.y; y <= t2.y; y++) // For loop to fill in top segment of the triangles
+    {
+        float alpha = (float)(y - t0.y)/total_height;
+        float beta  = (float) (y - t1.y)/segment_height;
+        Vec2i A = t0 + (t2 - t0) * alpha;
+        Vec2i B = t1 + (t2 - t1) * beta;
+        if (A.x > B.x) { std::swap(A, B); }
+        for (int j = A.x; j < B.x; j++)
+        {
+            image.set(j, y, color);
+        }
+    }
+    */
 
     /* Demo to create outlines of triangles and show boundaries
     line(t0, t1, image, green); // Drawing a line from the coordinate with the smallest y coord to the middle y coord. 
