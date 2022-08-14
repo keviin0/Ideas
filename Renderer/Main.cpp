@@ -13,38 +13,48 @@
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0  , 0  , 255);
 const TGAColor green = TGAColor(0,   255, 0  , 255);
+const int width = 800;
+const int height = 800;
 
 void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color);
 void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color);
 
+
 int main(int argc, char** argv)
 {
     Model model("./african_head.obj");
-    TGAImage image(200, 200, TGAImage::RGB);
+    TGAImage image(width, height, TGAImage::RGB);
 
+
+    /* Line sweeping demo
     Vec2i t0[3] = {Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80)};
     Vec2i t1[3] = {Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180)};
     Vec2i t2[3] = {Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180)};
     triangle(t0[0], t0[1], t0[2], image, red);
     triangle(t1[0], t1[1], t1[2], image, white); 
     triangle(t2[0], t2[1], t2[2], image, green);
-    
-    /*
+    */
+
+    Vec3f light_direction(0, 0, -1);
+
     for (int i = 0; i < model.nfaces(); i++)
     {
         std::vector<int> face = model.face(i);
+        Vec2i screen_coords[3];
+        Vec3f world_coords[3];
         for (int j = 0; j < 3; j++)
         {
-            Vec3 v0 = model.vert(face[j]);
-            Vec3 v1 = model.vert(face[(j + 1) % 3]);
-            int p0.x = (v0.x + 1.) * image.get_width() / 2.;
-            int p0.y = (v0.y + 1.) * image.get_height() / 2.;
-            int p1.x = (v1.x + 1.) * image.get_width() / 2.;
-            int p1.y = (v1.y + 1.) * image.get_height() / 2.;
-            line(p0.x, p0.y, p1.x, p1.y, image, white);
+            Vec3f v = model.vert(face[j]);
+            screen_coords[j] = Vec2i((v.x + 1.) * width/2, (v.y + 1.) * height/2.);
+            world_coords[j] = v;
         }
+        Vec3f n = (world_coords[2] - world_coords[0]) ^ (world_coords[1] - world_coords[0]); 
+        n.normalize();
+        float intensity = n * light_direction;
+        if (intensity > 0) { 
+            triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255)); 
+        } 
     }
-    */
     image.flip_vertically(); // Convention is usually that top left is (0, 0) so flipping vertically sets bottom left to being origin
     image.write_tga_file("output.tga");
 
@@ -53,6 +63,7 @@ int main(int argc, char** argv)
 
 void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color)
 {
+    if (t0.y==t1.y && t0.y==t2.y) return;
     // Sort y-values of each vertex in ascending order in order to create segments that will allow us to fill lines later
     if (t0.y > t1.y) { std::swap(t0, t1); }
     if (t0.y > t2.y) { std::swap(t0, t2); }
@@ -62,7 +73,7 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color)
     for (int i = 0; i < total_height; i++) // For loop to fill in bottom segment of the triangles
     {
         bool second_half = i > t1.y - t0.y || t1.y == t0.y;
-        int segment_height = second_half ? t2.y - t1.y + 1: t1.y - t0.y + 1;
+        int segment_height = second_half ? t2.y - t1.y: t1.y - t0.y;
         float alpha = (float) i/total_height;
         float beta  = (float) (i - (second_half ? t1.y - t0.y: 0)) /segment_height;
         Vec2i A =               t0 + (t2 - t0) * alpha;
